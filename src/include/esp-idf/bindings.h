@@ -463,8 +463,8 @@
 #endif
 #endif
 
-// ???
-#if ESP_IDF_VERSION_MAJOR < 6
+// MODIFIED — tighten the guard to v4.x and v5.0–5.2 only
+#if ESP_IDF_VERSION_MAJOR < 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 3)
 #include "driver/periph_ctrl.h"
 #endif
 
