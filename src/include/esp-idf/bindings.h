@@ -493,7 +493,7 @@
 #endif
 
 // RTC
-#if ESP_IDF_VERSION_MAJOR < 6
+#if ESP_IDF_VERSION_MAJOR < 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 3)
 #include "driver/rtc_cntl.h"
 #endif
 #include "driver/rtc_io.h"
