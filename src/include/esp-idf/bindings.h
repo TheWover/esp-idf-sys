@@ -27,7 +27,9 @@
 #include "freertos/semphr.h"
 #include "freertos/stream_buffer.h"
 #include "freertos/task.h"
+#if ESP_IDF_VERSION_MAJOR < 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 3)
 #include "freertos/task_snapshot.h"
+#endif
 #include "freertos/timers.h"
 
 #if CONFIG_IDF_TARGET_ESP32
@@ -76,7 +78,7 @@
 #if ESP_IDF_VERSION_MAJOR > 4
 #ifdef ESP_IDF_COMP_SPI_FLASH_ENABLED
 #include "esp_flash.h"
-#if ESP_IDF_VERSION_MAJOR > 5
+#if ESP_IDF_VERSION_MAJOR > 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 3)
 #include "spi_flash_mmap.h"
 #else
 #include "esp_spi_flash.h"
@@ -364,9 +366,17 @@
 #include "soc/rtc_periph.h"
 #endif
 
-// Since ESP-IDF 5.3 all drivers except TWAI are separate components
-#define OLD_DRIVER_COMP ((ESP_IDF_VERSION_MAJOR < 5 || ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 3) && defined(ESP_IDF_COMP_DRIVER_ENABLED))
-#define OLD_DRIVER_COMP_TWAI ((ESP_IDF_VERSION_MAJOR < 5 || ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 5) && defined(ESP_IDF_COMP_DRIVER_ENABLED))
+// Since ESP-IDF 5.3 all drivers except TWAI are separate components.
+// Encode ESP_IDF_COMP_DRIVER_ENABLED as a 0/1 integer so that the macros below
+// do not contain `defined()` inside a macro body, which is undefined behaviour
+// in C and triggers -Wexpansion-to-defined at every expansion site.
+#ifdef ESP_IDF_COMP_DRIVER_ENABLED
+#define _DRIVER_COMP_PRESENT 1
+#else
+#define _DRIVER_COMP_PRESENT 0
+#endif
+#define OLD_DRIVER_COMP ((ESP_IDF_VERSION_MAJOR < 5 || ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 3) && _DRIVER_COMP_PRESENT)
+#define OLD_DRIVER_COMP_TWAI ((ESP_IDF_VERSION_MAJOR < 5 || ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR < 5) && _DRIVER_COMP_PRESENT)
 
 // ADC
 #if ESP_IDF_VERSION_MAJOR < 6 && defined(ESP_IDF_COMP_DRIVER_ENABLED)
