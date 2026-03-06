@@ -519,7 +519,7 @@
 #endif
 
 // Sigma-delta
-#if ESP_IDF_VERSION_MAJOR < 6
+#if (ESP_IDF_VERSION_MAJOR < 6) && defined(SOC_SDM_SUPPORTED)
 #include "driver/sigmadelta.h"
 #endif
 
