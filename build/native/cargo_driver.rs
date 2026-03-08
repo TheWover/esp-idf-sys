@@ -8,6 +8,8 @@ use std::{env, fs};
 use anyhow::{anyhow, bail, Context, Error, Result};
 use config::{ESP_IDF_REPOSITORY_VAR, ESP_IDF_VERSION_VAR};
 use embuild::cargo::IntoWarning;
+use embuild::cli::NativeCommandArgs;
+use embuild::cmake::file_api::codemodel::target::Role;
 use embuild::cmake::file_api::codemodel::Language;
 use embuild::cmake::file_api::ObjKind;
 use embuild::espidf::{
@@ -28,6 +30,42 @@ use crate::config::{BuildConfig, ESP_IDF_GLOB_VAR_PREFIX, ESP_IDF_TOOLS_INSTALL_
 
 pub mod chip;
 pub mod config;
+
+/// Build a LinkArgsBuilder from CMake File API link data, properly categorizing
+/// command fragments by their role.
+///
+/// This function works around a bug in embuild 0.33.1 where the TryFrom<&Link>
+/// implementation for LinkArgsBuilder ignores the fragment roles and puts all
+/// fragments into `linkflags`, causing library files (marked with Role::Libraries)
+/// to be misprocessed and dropped during linking.
+///
+/// See: https://github.com/esp-rs/embuild/issues/XXX
+fn build_link_args_from_cmake(
+    link: &cmake::file_api::codemodel::target::Link,
+) -> Result<build::LinkArgsBuilder> {
+    let mut libflags = Vec::new();
+    let mut linkflags = Vec::new();
+    let mut libdirflags = Vec::new();
+
+    for fragment in &link.command_fragments {
+        let args: Vec<String> = NativeCommandArgs::new(&fragment.fragment).collect();
+
+        match fragment.role {
+            Role::Libraries => libflags.extend(args),
+            Role::Flags => linkflags.extend(args),
+            Role::LibraryPath => libdirflags.extend(args),
+            Role::FrameworkPath => libdirflags.extend(args),
+        }
+    }
+
+    // Create a default builder and set the public fields
+    let mut builder = build::LinkArgsBuilder::default();
+    builder.libflags = libflags;
+    builder.linkflags = linkflags;
+    builder.libdirflags = libdirflags;
+
+    Ok(builder)
+}
 
 pub fn build() -> Result<EspIdfBuildOutput> {
     sanitize_project_path()?;
@@ -590,7 +628,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     let build_output = EspIdfBuildOutput {
         cincl_args: build::CInclArgs::try_from(&target.compile_groups[0])?,
         link_args: Some(
-            build::LinkArgsBuilder::try_from(&target.link.unwrap())?
+            build_link_args_from_cmake(&target.link.unwrap())?
                 .linker(custom_linker.as_ref().unwrap_or(&compiler))
                 .working_directory(&cmake_build_dir)
                 .force_ldproxy(true)
