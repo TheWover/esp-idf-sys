@@ -673,9 +673,11 @@
 #if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32S3)
 #include "esp_nimble_hci.h"
 #endif
+#include "nimble/ble.h"              // Core BLE definitions (BLE_OWN_ADDR_PUBLIC, etc.)
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
+#include "host/ble_gap.h"            // GAP APIs (ble_gap_disc, ble_gap_disc_params, BLE_GAP_EVENT_DISC)
 #include "host/util/util.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
